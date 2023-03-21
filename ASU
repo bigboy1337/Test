@@ -1,0 +1,189 @@
+var g_Data;
+var srvUrl = "192.168.100.197:3000";
+var webSocket = new WebSocket('ws://' + srvUrl);
+
+webSocket.addEventListener('open', function (event) {
+    webSocket.send('P5 Client');
+});
+
+webSocket.addEventListener('message', function (event) {
+    if (event.data != undefined)
+    {
+        g_Data = JSON.parse(event.data);
+        console.log("g_Data : " + event.data);
+    }
+    redraw();
+});
+
+function DrawCircle(x, y, d, c, f) {
+    if (f) { fill(c); } else { noFill(); }
+    stroke(c);
+    circle(x, y, d);
+    noStroke();
+}
+
+function DrawText(x, y, txt, txtSize, c, f) {
+    textSize(txtSize);
+    textFont(f);
+    fill(c);
+    text(txt, x, y);
+}
+
+function DrawBox(x, y, w, h, c, t, f) {
+    if (f) { fill(c); } else { noFill(); }
+    stroke(c);
+    strokeWeight(t);
+    rect(x, y, w, h);
+    noStroke();
+}
+
+
+
+var flMultiply;
+
+var Canvas;
+
+
+
+
+function preload() {
+
+	g_MapImages = {
+    "de_cache" : loadImage('assets/csgo_maps/de_cache_radar.png'),
+    "de_cbble" : loadImage('assets/csgo_maps/de_cbble_radar.png'),
+    "de_dust2" : loadImage('assets/csgo_maps/de_dust2_radar.png'),
+    "de_inferno" : loadImage('assets/csgo_maps/de_inferno_radar.png'),
+    "de_mirage" : loadImage('assets/csgo_maps/de_mirage_radar.png'),
+    "de_overpass" : loadImage('assets/csgo_maps/de_overpass_radar.png'),
+    "de_train" : loadImage('assets/csgo_maps/de_train_radar.png'),
+	"de_vertigo" : loadImage('assets/csgo_maps/de_vertigo_radar.png'),
+	"de_vertigo_lower" : loadImage('assets/csgo_maps/de_vertigo_lower_radar.png'),
+	"de_nuke" : loadImage('assets/csgo_maps/de_nuke_radar.png'),
+	"de_nuke_lower" : loadImage('assets/csgo_maps/de_nuke_lower_radar.png'),
+	"de_ancient" : loadImage('assets/csgo_maps/de_ancient_radar.png'),
+	"de_anubis" : loadImage('assets/csgo_maps/de_anubis_radar.png')
+	};
+
+}
+
+function setup() 
+{
+	angleMode(DEGREES);
+    if(windowWidth < windowHeight)
+	{
+		Canvas = createCanvas(windowWidth, windowWidth);
+		Canvas.position(0 , (windowHeight - windowWidth) /2 );
+		flMultiply = windowWidth / 1024;
+		LastMapName = "color"
+		background('#222222');
+		noLoop();
+	}
+	 if(windowHeight < windowWidth)
+	{
+		Canvas = createCanvas(windowHeight, windowHeight);
+		Canvas.position((windowWidth - windowHeight) / 2,0);
+		flMultiply = windowHeight / 1024;
+		LastMapName = "color"
+		background('#222222');
+		noLoop();
+	}
+}
+
+function windowResized() 
+{
+    if(windowWidth < windowHeight)
+	{
+		Canvas = createCanvas(windowWidth, windowWidth);
+		Canvas.position(0 , (windowHeight - windowWidth) /2 );
+		flMultiply = windowWidth / 1024;
+		LastMapName = "color"
+		background('#222222');
+		noLoop();
+	}
+	if(windowHeight < windowWidth)
+	{
+		Canvas = createCanvas(windowHeight, windowHeight);
+		Canvas.position((windowWidth - windowHeight) /2,0);
+		flMultiply = windowHeight / 1024;
+		LastMapName = "color"
+		background('#222222');
+		noLoop();
+	}
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+ }
+
+function draw() {
+    if (g_Data != undefined)
+    {
+        var strCommand = g_Data["global"]["command"];
+        
+        if (strCommand == "render")
+        {
+			var strMapName = g_Data["global"]["map_name"];
+			var imgBackground = g_MapImages[strMapName];
+        if (imgBackground) {
+            background(imgBackground);
+        } else {
+            console.log("Background image not found for map: " + strMapName);
+        }
+
+            console.log(strMapName);
+			var dwCircleSize = 15;
+			var dwAdditionX = 0;
+			var dwAdditionY = 0;
+            var dwMaxCount = g_Data["global"]["max_count"];
+			var flLocalViewYaw = g_Data["global"]["local_view_angle"][1];
+            var flLocalMapPositionX = g_Data["global"]["local_map_coordinate"][0] * flMultiply;
+            var flLocalMapPositionY = g_Data["global"]["local_map_coordinate"][1] * flMultiply;
+            DrawCircle(flLocalMapPositionX, flLocalMapPositionY, dwCircleSize, 'rgb(255,255,255)', true);
+            for (var i = 0; i < dwMaxCount; i++)
+            {
+                var strTeam = g_Data[i]["team"];
+                var dwHealth = g_Data[i]["health"];
+                var strDormant = g_Data[i]["dormant"];
+                var strObserved = g_Data[i]["observed"];
+                var strC4Owner = g_Data[i]["c4_owner"];
+                var strNickname = g_Data[i]["nickname"];
+                var strWeapon = g_Data[i]["weapon_name"];
+				var strArea = g_Data[i]["different_area"];
+                var flMapPositionX = g_Data[i]["map_coordinate"][0] * flMultiply;
+                var flMapPositionY = g_Data[i]["map_coordinate"][1] * flMultiply;
+                if (strTeam == "enemy")
+                {
+                    if (strDormant == "false")
+                        DrawCircle(flMapPositionX, flMapPositionY, dwCircleSize, 'rgb(255,0,0)', true);
+                    else if (strDormant == "true")
+                        DrawText(flMapPositionX - 4, flMapPositionY + 6, "?", 20, `rgb(255,0,0)`, true);
+					if (strArea == "true")
+                        DrawText(flMapPositionX - 35, flMapPositionY + 20, "AREA", 10, `rgb(255,255,255)`, true);
+                    if (dwHealth >= 100)
+                        DrawText( flMapPositionX - 35, flMapPositionY + 5, dwHealth, 15, `#00FF00`, true);
+                    else if (dwHealth >= 75)
+                        DrawText( flMapPositionX - 30, flMapPositionY + 5, dwHealth, 15, `#00FF00`, true);
+                    else if (dwHealth <= 75 && dwHealth >= 35)
+                        DrawText( flMapPositionX - 25, flMapPositionY + 5, dwHealth, 15, `#ffff00`, true);
+                    else if (dwHealth <= 35 && dwHealth >= 10)
+                        DrawText( flMapPositionX - 25, flMapPositionY + 5, dwHealth, 15, `rgb(255,0,0)`, true);
+                    else if (dwHealth < 10)
+                        DrawText( flMapPositionX - 15, flMapPositionY + 5, dwHealth, 15, `rgb(255,0,0)`, true);
+                    if (strC4Owner == "false")
+                        DrawText( flMapPositionX + 10, flMapPositionY - 5, strNickname, 10, `rgb(255,255,255)`, true);
+                    else if (strC4Owner == "true")
+                        DrawText( flMapPositionX + 10, flMapPositionY - 5, strNickname + " (C4)", 10, `rgb(255,255,255)`, true);
+                    DrawText( flMapPositionX + 10, flMapPositionY + 10, strWeapon, 10, `rgb(255,255,0)`, true);
+                }
+                else if (strTeam == "teammate")
+                {
+                    if (strObserved == "false")
+                        DrawCircle(flMapPositionX, flMapPositionY, dwCircleSize, 'rgb(0,0,255)', true);
+                    else if (strObserved == "true")
+                        DrawCircle(flLocalMapPositionX, flLocalMapPositionY, dwCircleSize, 'rgb(255,255,255)', true);
+                    DrawText(flMapPositionX + 10, flMapPositionY + 4, strNickname, 10, `rgb(255,255,255)`, true);
+                }
+            }
+        }
+    }
+}
